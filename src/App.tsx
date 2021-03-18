@@ -1,12 +1,22 @@
 /** @jsxImportSource @emotion/react */
+/** @jsx jsx */
+
+import { jsx } from '@emotion/react';
+import styled from '@emotion/styled';
 
 import {
+  Children,
+  cloneElement,
+  createContext,
   forwardRef,
+  Fragment,
   PropsWithChildren,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from 'react';
 import type { ComponentType, HTMLAttributes } from 'react';
@@ -23,6 +33,8 @@ import Button from '@material-ui/core/Button';
 import ToggleButton from '@material-ui/core/ToggleButton';
 import ToggleButtonGroup from '@material-ui/core/ToggleButtonGroup';
 import Typography from '@material-ui/core/Typography';
+import { useTheme } from '@material-ui/core/styles';
+import useMediaQuery from '@material-ui/core/useMediaQuery';
 import DateFnsAdapter from '@material-ui/lab/AdapterDateFns';
 import MuiDateRangePicker from '@material-ui/lab/DateRangePicker';
 import type { DateRange } from '@material-ui/lab/DateRangePicker';
@@ -31,9 +43,11 @@ import LocalizationProvider from '@material-ui/lab/LocalizationProvider';
 import { Chart } from 'react-charts';
 import { ErrorBoundary as ReactErrorBoundary, useErrorHandler } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
-import { VariableSizeList, ListChildComponentProps } from 'react-window';
+import { VariableSizeList } from 'react-window';
+import type { ListChildComponentProps } from 'react-window';
 
 import { createFilterOptions } from './createFilterOptions';
+import { Virtualize } from './Virtualize';
 
 const USE_SANDBOX = true;
 
@@ -146,15 +160,97 @@ type StockSelectProps = {
 const filterOptions = createFilterOptions<StockSymbol>({
   matchFrom: 'start',
   // TODO add virtualisation instead.
-  limit: 100,
+  // limit: 100,
   stringify: (option) => {
     return [option.displaySymbol, option.description];
   },
 });
 
+const LISTBOX_PADDING = 8; // px
+
+function Row(props: ListChildComponentProps) {
+  const { data, index, style } = props;
+
+  return cloneElement(data[index], {
+    style: {
+      ...style,
+      top: (style.top as number) + LISTBOX_PADDING,
+    },
+  });
+}
+
+const OuterElementContext = createContext({});
+
+const OuterElementType = forwardRef<HTMLDivElement>((props, ref) => {
+  const outerProps = useContext(OuterElementContext);
+  return (
+    <div
+      css={css`
+        box-sizing: border-box;
+      `}
+      ref={ref}
+      {...props}
+      {...outerProps}
+    />
+  );
+});
+
+const InnerElementType = styled.ul`
+  padding: 0;
+  margin: 0;
+`;
+
+function useResetCache(data: unknown) {
+  const ref = useRef<VariableSizeList>(null);
+  useEffect(() => {
+    if (ref.current != null) {
+      ref.current.resetAfterIndex(0, true);
+    }
+  }, [data]);
+  return ref;
+}
+
 // https://next.material-ui.com/components/autocomplete/#virtualization
-const ListboxComponent = forwardRef<HTMLDivElement>((props, ref) => {
-  return <div ref={ref} {...props}></div>;
+const ListboxComponent = forwardRef<HTMLDivElement>(({ children, ...other }, ref) => {
+  const itemData = Children.toArray(children);
+  const theme = useTheme();
+  const smUp = useMediaQuery(theme.breakpoints.up('sm'), {
+    noSsr: true,
+  });
+  console.log({ smUp });
+  const itemCount = itemData.length;
+  const itemSize = smUp ? 36 : 48;
+
+  function getHeight() {
+    if (itemCount > 8) {
+      return 8 * itemSize;
+    }
+    return itemCount * itemSize;
+  }
+
+  // console.log({ itemCount, itemSize, height: getHeight() });
+
+  // const gridRef = useResetCache(itemCount);
+
+  return (
+    <div ref={ref}>
+      <OuterElementContext.Provider value={other}>
+        <VariableSizeList
+          itemData={itemData}
+          height={getHeight() + 2 * LISTBOX_PADDING}
+          width="100%"
+          // ref={gridRef}
+          outerElementType={OuterElementType}
+          innerElementType={InnerElementType}
+          itemSize={() => itemSize}
+          overscanCount={5}
+          itemCount={itemCount}
+        >
+          {Row}
+        </VariableSizeList>
+      </OuterElementContext.Provider>
+    </div>
+  );
 });
 
 function StockSelect({ symbols, onChange }: StockSelectProps) {
@@ -195,6 +291,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
       `}
       ListboxComponent={ListboxComponent as ComponentType<HTMLAttributes<HTMLElement>>}
       disableCloseOnSelect
+      disableListWrap
       multiple
       loading={isLoading}
       open={isOpen}
@@ -202,7 +299,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
         setIsOpen(true);
       }}
       onClose={() => {
-        setIsOpen(false);
+        // setIsOpen(false);
       }}
       options={options}
       getOptionLabel={(option) => option.displaySymbol}
@@ -234,10 +331,10 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
           InputProps={{
             ...inputProps.InputProps,
             endAdornment: (
-              <>
+              <Fragment>
                 {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
                 {inputProps.InputProps.endAdornment}
-              </>
+              </Fragment>
             ),
           }}
         />
@@ -257,11 +354,11 @@ function DateRangePicker({ value, onChange }: DateRangePickerProps) {
       value={value}
       onChange={onChange}
       renderInput={(startProps, endProps) => (
-        <>
+        <Fragment>
           <TextField {...startProps} variant="standard" />
           <Box sx={{ mx: 2 }}> to </Box>
           <TextField {...endProps} variant="standard" />
-        </>
+        </Fragment>
       )}
     />
   );
@@ -384,7 +481,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
   }, [data, priceKey]);
 
   return (
-    <>
+    <Fragment>
       <div
         css={css`
           display: flex;
@@ -398,7 +495,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
           // This API seems to be fairly quick,
           // showing a spinner for a few ms can actually appear jarring.
           isIdle || isLoading ? null : chartData.length > 0 ? (
-            <>
+            <Fragment>
               <div
                 css={css`
                   width: 85%;
@@ -416,11 +513,11 @@ function StockChart({ symbols, dateRange }: ChartProps) {
                 />
               </div>
               <PriceTypeToggle value={priceKey} onChange={setPriceKey} />
-            </>
+            </Fragment>
           ) : null
         }
       </div>
-    </>
+    </Fragment>
   );
 }
 
@@ -476,6 +573,7 @@ function App() {
           width: 100%;
         `}
       >
+        {/* <Virtualize /> */}
         <StockSelect symbols={symbols} onChange={setSymbols} />
         <DateRangePicker value={dateRange} onChange={setDateRange} />
       </div>
