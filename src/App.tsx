@@ -158,7 +158,7 @@ const ListboxComponent = forwardRef<HTMLDivElement>((props, ref) => {
 });
 
 function StockSelect({ symbols, onChange }: StockSelectProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const { error, data: options = [], createRemoteDataEffect } = useRemoteData<StockSymbol[]>();
 
   useErrorHandler(error);
