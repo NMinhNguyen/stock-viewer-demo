@@ -43,7 +43,7 @@ import LocalizationProvider from '@material-ui/lab/LocalizationProvider';
 import { Chart } from 'react-charts';
 import { ErrorBoundary as ReactErrorBoundary, useErrorHandler } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
-import { VariableSizeList } from 'react-window';
+import { FixedSizeList } from 'react-window';
 import type { ListChildComponentProps } from 'react-window';
 
 import { createFilterOptions } from './createFilterOptions';
@@ -200,15 +200,15 @@ const InnerElementType = styled.ul`
   margin: 0;
 `;
 
-function useResetCache(data: unknown) {
-  const ref = useRef<VariableSizeList>(null);
-  useEffect(() => {
-    if (ref.current != null) {
-      ref.current.resetAfterIndex(0, true);
-    }
-  }, [data]);
-  return ref;
-}
+// function useResetCache(data: unknown) {
+//   const ref = useRef<FixedSizeList>(null);
+//   useEffect(() => {
+//     if (ref.current != null) {
+//       ref.current.resetAfterIndex(0, true);
+//     }
+//   }, [data]);
+//   return ref;
+// }
 
 // https://next.material-ui.com/components/autocomplete/#virtualization
 const ListboxComponent = forwardRef<HTMLDivElement>(({ children, ...other }, ref) => {
@@ -235,19 +235,19 @@ const ListboxComponent = forwardRef<HTMLDivElement>(({ children, ...other }, ref
   return (
     <div ref={ref}>
       <OuterElementContext.Provider value={other}>
-        <VariableSizeList
+        <FixedSizeList
           itemData={itemData}
           height={getHeight() + 2 * LISTBOX_PADDING}
           width="100%"
           // ref={gridRef}
           outerElementType={OuterElementType}
           innerElementType={InnerElementType}
-          itemSize={() => itemSize}
+          itemSize={itemSize}
           overscanCount={5}
           itemCount={itemCount}
         >
           {Row}
-        </VariableSizeList>
+        </FixedSizeList>
       </OuterElementContext.Provider>
     </div>
   );
