@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 
 import {
+  forwardRef,
   PropsWithChildren,
   useCallback,
   useEffect,
@@ -8,13 +9,12 @@ import {
   useReducer,
   useState,
 } from 'react';
+import type { ComponentType, HTMLAttributes } from 'react';
 import { css } from '@emotion/react';
 import { endOfDay, isAfter, getUnixTime, fromUnixTime } from 'date-fns';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import TextField from '@material-ui/core/TextField';
-import Autocomplete, {
-  createFilterOptions,
-} from '@material-ui/core/Autocomplete';
+import Autocomplete from '@material-ui/core/Autocomplete';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/core/Alert';
 import AlertTitle from '@material-ui/core/AlertTitle';
@@ -22,23 +22,23 @@ import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
 import ToggleButton from '@material-ui/core/ToggleButton';
 import ToggleButtonGroup from '@material-ui/core/ToggleButtonGroup';
+import Typography from '@material-ui/core/Typography';
 import DateFnsAdapter from '@material-ui/lab/AdapterDateFns';
 import MuiDateRangePicker from '@material-ui/lab/DateRangePicker';
 import type { DateRange } from '@material-ui/lab/DateRangePicker';
 import LocalizationProvider from '@material-ui/lab/LocalizationProvider';
 // @ts-expect-error ts(2307) There's no typings for `react-charts`
 import { Chart } from 'react-charts';
-import {
-  ErrorBoundary as ReactErrorBoundary,
-  useErrorHandler,
-} from 'react-error-boundary';
+import { ErrorBoundary as ReactErrorBoundary, useErrorHandler } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
+import { VariableSizeList, ListChildComponentProps } from 'react-window';
+// import type { FilterOptionsState } from '@material-ui/core';
+
+import { createFilterOptions } from './createFilterOptions';
 
 const USE_SANDBOX = true;
 
-const FINNHUB_API_TOKEN = USE_SANDBOX
-  ? 'sandbox_c17489f48v6se55vleeg'
-  : 'c17489f48v6se55vlee0';
+const FINNHUB_API_TOKEN = USE_SANDBOX ? 'sandbox_c17489f48v6se55vleeg' : 'c17489f48v6se55vlee0';
 
 const PRICE_PROPERTY_BY_KEY = {
   OPEN: 'o',
@@ -62,10 +62,7 @@ const PENDING = 'PENDING';
 const RESOLVED = 'RESOLVED';
 const REJECTED = 'REJECTED';
 
-type RemoteDataAction<T> =
-  | [typeof PENDING]
-  | [typeof RESOLVED, T]
-  | [typeof REJECTED, Error];
+type RemoteDataAction<T> = [typeof PENDING] | [typeof RESOLVED, T] | [typeof REJECTED, Error];
 
 function useRemoteData<T>() {
   const [state, dispatch] = useReducer(
@@ -99,10 +96,7 @@ function useRemoteData<T>() {
   };
 
   const createRemoteDataEffect = useCallback(
-    (
-      fetchData: () => Promise<T>,
-      { onSuccess }: CreateRemoteDataEffectOptions = {},
-    ) => {
+    (fetchData: () => Promise<T>, { onSuccess }: CreateRemoteDataEffectOptions = {}) => {
       let isCancelled = false;
       (async () => {
         dispatch([PENDING]);
@@ -119,8 +113,6 @@ function useRemoteData<T>() {
         if (!isCancelled) {
           dispatch([RESOLVED, data]);
           onSuccess?.(data);
-        } else {
-          console.log('cancelled!');
         }
       })();
 
@@ -153,22 +145,26 @@ type StockSelectProps = {
 };
 
 const filterOptions = createFilterOptions<StockSymbol>({
+  matchFrom: 'start',
   // TODO add virtualisation instead.
   limit: 100,
   stringify: (option) => {
-    // Join using a non-breaking space (a character that wouldn't be present in either field)
-    return `${option.displaySymbol}\u00a0${option.description}`;
+    return [option.displaySymbol, option.description];
   },
 });
 
+// https://next.material-ui.com/components/autocomplete/#virtualization
+const ListboxComponent = forwardRef<HTMLDivElement>((props, ref) => {
+  return <div ref={ref} {...props}></div>;
+});
+
 function StockSelect({ symbols, onChange }: StockSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const { error, data: options = [], createRemoteDataEffect } = useRemoteData<
-    StockSymbol[]
-  >();
+  const [isOpen, setIsOpen] = useState(true);
+  const { error, data: options = [], createRemoteDataEffect } = useRemoteData<StockSymbol[]>();
 
   useErrorHandler(error);
 
+  // TODO do I need to allow reloading?
   const isLoading = isOpen && options.length === 0;
 
   useEffect(() => {
@@ -186,7 +182,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
       }
 
       return ((await response.json()) as StockSymbol[]).sort((a, b) =>
-        a.description.localeCompare(b.description, undefined, {
+        a.displaySymbol.localeCompare(b.displaySymbol, undefined, {
           sensitivity: 'base',
         }),
       );
@@ -198,6 +194,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
       css={css`
         width: 300px;
       `}
+      ListboxComponent={ListboxComponent as ComponentType<HTMLAttributes<HTMLElement>>}
       disableCloseOnSelect
       multiple
       loading={isLoading}
@@ -213,12 +210,15 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
       // TODO if the variable height turns out to be a problem when virtualising, get rid of this
       renderOption={(optionProps, option) => (
         <li {...optionProps}>
-          {
-            // It appears that the description can be empty
-            option.description
-              ? `${option.description} (${option.displaySymbol})`
-              : option.displaySymbol
-          }
+          {/* TODO figure out what to do with text wrapping */}
+          <Typography noWrap>
+            {
+              // It appears that the description can be empty
+              option.description
+                ? `${option.displaySymbol} - ${option.description}`
+                : option.displaySymbol
+            }
+          </Typography>
         </li>
       )}
       filterOptions={filterOptions}
@@ -236,9 +236,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
             ...inputProps.InputProps,
             endAdornment: (
               <>
-                {isLoading ? (
-                  <CircularProgress color="inherit" size={20} />
-                ) : null}
+                {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
                 {inputProps.InputProps.endAdornment}
               </>
             ),
@@ -327,13 +325,9 @@ const axes = [
 function StockChart({ symbols, dateRange }: ChartProps) {
   const [priceKey, setPriceKey] = useState<PriceKey>('OPEN');
 
-  const {
-    isIdle,
-    isLoading,
-    error,
-    data,
-    createRemoteDataEffect,
-  } = useRemoteData<StockSymbolWithCandle[]>();
+  const { isIdle, isLoading, error, data, createRemoteDataEffect } = useRemoteData<
+    StockSymbolWithCandle[]
+  >();
 
   useErrorHandler(error);
 
@@ -358,9 +352,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
             );
 
             if (!response.ok) {
-              throw new Error(
-                `Failed to fetch candlestick data for symbol '${symbol.symbol}'`,
-              );
+              throw new Error(`Failed to fetch candlestick data for symbol '${symbol.symbol}'`);
             }
 
             const candle = (await response.json()) as Candle;
@@ -383,14 +375,12 @@ function StockChart({ symbols, dateRange }: ChartProps) {
 
     return data.map((candle) => ({
       label: candle.displaySymbol,
-      data: (candle[PRICE_PROPERTY_BY_KEY[priceKey]] ?? []).map(
-        (price, index) => ({
-          // If `candle[PRICE_KEYS[priceKey]]` was not null, we can probably assume
-          // `candle.t` is present too.
-          primary: fromUnixTime(candle.t![index]),
-          secondary: price,
-        }),
-      ),
+      data: (candle[PRICE_PROPERTY_BY_KEY[priceKey]] ?? []).map((price, index) => ({
+        // If `candle[PRICE_KEYS[priceKey]]` was not null, we can probably assume
+        // `candle.t` is present too.
+        primary: fromUnixTime(candle.t![index]),
+        secondary: price,
+      })),
     }));
   }, [data, priceKey]);
 
