@@ -383,12 +383,6 @@ function StockChart({ symbols, dateRange }: ChartProps) {
     }));
   }, [data, priceKey]);
 
-  if (isIdle || isLoading) {
-    // This API seems to be fairly quick,
-    // showing a spinner for a few ms can actually appear jarring.
-    return null;
-  }
-
   return (
     <>
       <div
@@ -400,27 +394,31 @@ function StockChart({ symbols, dateRange }: ChartProps) {
           height: 60%;
         `}
       >
-        {chartData.length > 0 ? (
-          <>
-            <div
-              css={css`
-                width: 85%;
-                height: 100%;
-              `}
-            >
-              <Chart
-                // `react-charts` seems to have issues with props changing,
-                // and remounting the component fixes them:
-                // https://github.com/tannerlinsley/react-charts/issues/134
-                key={`${priceKey}-${chartKey}`}
-                data={chartData}
-                axes={axes}
-                tooltip
-              />
-            </div>
-            <PriceTypeToggle value={priceKey} onChange={setPriceKey} />
-          </>
-        ) : null}
+        {
+          // This API seems to be fairly quick,
+          // showing a spinner for a few ms can actually appear jarring.
+          isIdle || isLoading ? null : chartData.length > 0 ? (
+            <>
+              <div
+                css={css`
+                  width: 85%;
+                  height: 100%;
+                `}
+              >
+                <Chart
+                  // `react-charts` seems to have issues with props changing,
+                  // and remounting the component fixes them:
+                  // https://github.com/tannerlinsley/react-charts/issues/134
+                  key={`${priceKey}-${chartKey}`}
+                  data={chartData}
+                  axes={axes}
+                  tooltip
+                />
+              </div>
+              <PriceTypeToggle value={priceKey} onChange={setPriceKey} />
+            </>
+          ) : null
+        }
       </div>
     </>
   );
