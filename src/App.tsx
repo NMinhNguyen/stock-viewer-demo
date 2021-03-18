@@ -32,7 +32,6 @@ import { Chart } from 'react-charts';
 import { ErrorBoundary as ReactErrorBoundary, useErrorHandler } from 'react-error-boundary';
 import type { FallbackProps } from 'react-error-boundary';
 import { VariableSizeList, ListChildComponentProps } from 'react-window';
-// import type { FilterOptionsState } from '@material-ui/core';
 
 import { createFilterOptions } from './createFilterOptions';
 
