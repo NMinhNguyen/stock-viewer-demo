@@ -35,9 +35,13 @@ import { VariableSizeList, ListChildComponentProps } from 'react-window';
 
 import { createFilterOptions } from './createFilterOptions';
 
-const USE_SANDBOX = true;
+const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
 
-const FINNHUB_API_TOKEN = USE_SANDBOX ? 'sandbox_c17489f48v6se55vleeg' : 'c17489f48v6se55vlee0';
+if (!FINNHUB_API_KEY) {
+  throw new Error(
+    'Please define the `REACT_APP_FINNHUB_API_KEY` environment variable inside .env.local',
+  );
+}
 
 const PRICE_PROPERTY_BY_KEY = {
   OPEN: 'o',
@@ -173,7 +177,7 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
 
     return createRemoteDataEffect(async () => {
       const response = await fetch(
-        `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${FINNHUB_API_TOKEN}`,
+        `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${FINNHUB_API_KEY}`,
       );
 
       if (!response.ok) {
@@ -347,7 +351,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
                 symbol.symbol
               }&resolution=D&from=${getUnixTime(start)}&to=${getUnixTime(
                 endOfDay(end),
-              )}&token=${FINNHUB_API_TOKEN}`,
+              )}&token=${FINNHUB_API_KEY}`,
             );
 
             if (!response.ok) {
