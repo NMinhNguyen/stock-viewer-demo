@@ -32,6 +32,7 @@ import type { StockSymbol } from './api';
 // 1. terrible UX when the list is 26k items long
 // 2. Material-UI's Autocomplete component has some performance issues:
 // https://github.com/mui-org/material-ui/issues/25417
+// 3. a11y implications
 // However, I've left the virtualisation code in to show that I've considered it as an option.
 const USE_VIRTUALISATION = false;
 
