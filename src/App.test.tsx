@@ -11,7 +11,7 @@ import App from './App';
       - High Prices
       - Low Prices
       - Close Prices
-  - I can change the date range in the interactive chart
+  ✅ I can change the date range in the interactive chart
 */
 
 // https://kentcdodds.com/blog/write-fewer-longer-tests
@@ -82,4 +82,36 @@ test('lets a user select up to 3 stocks', async () => {
   expect(selectedOptions[0]).toHaveTextContent('AMC');
   expect(selectedOptions[1]).toHaveTextContent('GME');
   expect(selectedOptions[2]).toHaveTextContent('TSLA');
+});
+
+test('lets a user select and change a date range', async () => {
+  // Can't put this in `beforeAll` because it interferes with `fetch`:
+  // - https://github.com/mswjs/msw/issues/448
+  // - https://github.com/facebook/jest/issues/11103
+  jest.useFakeTimers('modern');
+  jest.setSystemTime(new Date('2021-03-20'));
+
+  try {
+    render(<App />);
+
+    const start = screen.getByLabelText(/start/i);
+    expect(start).toBeInTheDocument();
+    const end = screen.getByLabelText(/end/i);
+    expect(end).toBeInTheDocument();
+
+    userEvent.click(start);
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 1, 2021' }));
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 5, 2021' }));
+    // By default Material-UI pickers use en-US locale:
+    // https://github.com/dmtrKovalenko/date-io/blob/08dfe9e/packages/date-fns/src/date-fns-utils.ts#L49
+    expect(start).toHaveValue('03/01/2021');
+    expect(end).toHaveValue('03/05/2021');
+
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 10, 2021' }));
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 20, 2021' }));
+    expect(start).toHaveValue('03/10/2021');
+    expect(end).toHaveValue('03/20/2021');
+  } finally {
+    jest.useRealTimers();
+  }
 });
