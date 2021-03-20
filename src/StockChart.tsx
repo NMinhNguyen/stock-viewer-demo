@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useReducer, useState } from 'react';
 import { css } from '@emotion/react';
-import { isAfter, fromUnixTime } from 'date-fns';
+import { isAfter, isValid, fromUnixTime } from 'date-fns';
 import ToggleButton from '@material-ui/core/ToggleButton';
 import ToggleButtonGroup from '@material-ui/core/ToggleButtonGroup';
 import type { DateRange } from '@material-ui/lab/DateRangePicker';
@@ -49,7 +49,7 @@ function PriceTypeToggle({ value, onChange }: PriceTypeToggleProps) {
 
 function isValidDateRange(dateRange: DateRange<Date>): dateRange is [Date, Date] {
   const [start, end] = dateRange;
-  return Boolean(start && end && !isAfter(start, end));
+  return isValid(start) && isValid(end) && !isAfter(start!, end!);
 }
 
 const axes = [
