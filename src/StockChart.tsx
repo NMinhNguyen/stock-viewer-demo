@@ -147,6 +147,7 @@ export function StockChart({ symbols, dateRange }: ChartProps) {
                   // and remounting the component fixes them:
                   // https://github.com/tannerlinsley/react-charts/issues/134
                   key={`${priceKey}-${chartKey}`}
+                  data-testid="chart"
                   data={chartData}
                   axes={axes}
                   tooltip
