@@ -14,7 +14,7 @@ import {
 import type { ComponentType, HTMLAttributes } from 'react';
 import { css } from '@emotion/react';
 import styled from '@emotion/styled';
-import { endOfDay, isAfter, getUnixTime, fromUnixTime } from 'date-fns';
+import { isAfter, fromUnixTime } from 'date-fns';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import TextField from '@material-ui/core/TextField';
 import Autocomplete from '@material-ui/core/Autocomplete';
@@ -38,14 +38,8 @@ import { createFilterOptions } from './createFilterOptions';
 import { DateRangePicker } from './DateRangePicker';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useRemoteData } from './useRemoteData';
-
-const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
-
-if (!FINNHUB_API_KEY) {
-  throw new Error(
-    'Please define the `REACT_APP_FINNHUB_API_KEY` environment variable inside .env.local',
-  );
-}
+import { fetchCandle, fetchStockSymbols } from './api';
+import type { Candle, StockSymbol } from './api';
 
 // Disable virtualisation due to
 // 1. terrible UX when the list is 26k items long
@@ -168,13 +162,6 @@ function useVirtualisation(
   };
 }
 
-type StockSymbol = {
-  currency: string;
-  description: string;
-  displaySymbol: string;
-  symbol: string;
-};
-
 type StockSelectProps = {
   symbols: StockSymbol[];
   onChange: (values: StockSymbol[]) => void;
@@ -194,21 +181,13 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
       return;
     }
 
-    return createRemoteDataEffect(async () => {
-      const response = await fetch(
-        `https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${FINNHUB_API_KEY}`,
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch stock symbols');
-      }
-
-      return ((await response.json()) as StockSymbol[]).sort((a, b) =>
+    return createRemoteDataEffect(async () =>
+      (await fetchStockSymbols()).sort((a, b) =>
         a.displaySymbol.localeCompare(b.displaySymbol, undefined, {
           sensitivity: 'base',
         }),
-      );
-    });
+      ),
+    );
   }, [isLoading, createRemoteDataEffect]);
 
   const virtualisationProps = useVirtualisation(USE_VIRTUALISATION);
@@ -292,18 +271,6 @@ function PriceTypeToggle({ value, onChange }: PriceTypeToggleProps) {
   );
 }
 
-type Candle = {
-  // It appears that the API can sometimes return `null`.
-  c?: number[] | null;
-  h?: number[] | null;
-  l?: number[] | null;
-  o?: number[] | null;
-  // TODO do I need to do anything differently here?
-  s: 'ok' | 'no_data';
-  t?: number[] | null;
-  v?: number[] | null;
-};
-
 type StockSymbolWithCandle = StockSymbol & Candle;
 
 type ChartProps = {
@@ -323,6 +290,11 @@ const axes = [
   },
 ];
 
+function isValidDateRange(dateRange: DateRange<Date>): dateRange is [Date, Date] {
+  const [start, end] = dateRange;
+  return Boolean(start && end && !isAfter(start, end));
+}
+
 function StockChart({ symbols, dateRange }: ChartProps) {
   const [priceKey, setPriceKey] = useState<PriceKey>('OPEN');
 
@@ -335,8 +307,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
   const [chartKey, incrementChartKey] = useReducer((x) => x + 1, 0);
 
   useEffect(() => {
-    const [start, end] = dateRange;
-    if (!(symbols.length > 0 && start && end && !isAfter(start, end))) {
+    if (!(symbols.length > 0 && isValidDateRange(dateRange))) {
       return;
     }
 
@@ -344,19 +315,7 @@ function StockChart({ symbols, dateRange }: ChartProps) {
       () =>
         Promise.all(
           symbols.map(async (symbol) => {
-            const response = await fetch(
-              `https://finnhub.io/api/v1/stock/candle?symbol=${
-                symbol.symbol
-              }&resolution=D&from=${getUnixTime(start)}&to=${getUnixTime(
-                endOfDay(end),
-              )}&token=${FINNHUB_API_KEY}`,
-            );
-
-            if (!response.ok) {
-              throw new Error(`Failed to fetch candlestick data for symbol '${symbol.symbol}'`);
-            }
-
-            const candle = (await response.json()) as Candle;
+            const candle = await fetchCandle(symbol, dateRange);
             return { ...symbol, ...candle };
           }),
         ),
