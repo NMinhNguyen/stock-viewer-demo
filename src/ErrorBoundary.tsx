@@ -1,9 +1,9 @@
-import { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
 import Alert from '@material-ui/core/Alert';
 import AlertTitle from '@material-ui/core/AlertTitle';
 import Button from '@material-ui/core/Button';
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
-import { FallbackProps } from 'react-error-boundary';
+import type { FallbackProps } from 'react-error-boundary';
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
