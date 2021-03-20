@@ -47,12 +47,10 @@ function PriceTypeToggle({ value, onChange }: PriceTypeToggleProps) {
   );
 }
 
-type StockSymbolWithCandle = StockSymbol & Candle;
-
-type ChartProps = {
-  symbols: StockSymbol[];
-  dateRange: DateRange<Date>;
-};
+function isValidDateRange(dateRange: DateRange<Date>): dateRange is [Date, Date] {
+  const [start, end] = dateRange;
+  return Boolean(start && end && !isAfter(start, end));
+}
 
 const axes = [
   {
@@ -66,10 +64,12 @@ const axes = [
   },
 ];
 
-function isValidDateRange(dateRange: DateRange<Date>): dateRange is [Date, Date] {
-  const [start, end] = dateRange;
-  return Boolean(start && end && !isAfter(start, end));
-}
+type StockSymbolWithCandle = StockSymbol & Candle;
+
+type ChartProps = {
+  symbols: StockSymbol[];
+  dateRange: DateRange<Date>;
+};
 
 export function StockChart({ symbols, dateRange }: ChartProps) {
   const [priceKey, setPriceKey] = useState<PriceKey>('OPEN');
