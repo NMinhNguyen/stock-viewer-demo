@@ -562,7 +562,7 @@ function ErrorBoundary({ children }: PropsWithChildren<{}>) {
   );
 }
 
-function App() {
+function Main() {
   const [symbols, setSymbols] = useState<StockSymbol[]>([]);
   const [dateRange, setDateRange] = useState<DateRange<Date>>([null, null]);
 
@@ -595,12 +595,12 @@ function App() {
   );
 }
 
-export default function Root() {
+export default function App() {
   return (
     <LocalizationProvider dateAdapter={DateFnsAdapter}>
       <CssBaseline />
       <ErrorBoundary>
-        <App />
+        <Main />
       </ErrorBoundary>
     </LocalizationProvider>
   );
