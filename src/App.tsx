@@ -12,7 +12,6 @@ import {
   useReducer,
   useState,
 } from 'react';
-import type { PropsWithChildren } from 'react';
 import type { ComponentType, HTMLAttributes } from 'react';
 import { css } from '@emotion/react';
 import styled from '@emotion/styled';
@@ -22,10 +21,7 @@ import TextField from '@material-ui/core/TextField';
 import Autocomplete from '@material-ui/core/Autocomplete';
 import type { AutocompleteProps } from '@material-ui/core/Autocomplete';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Alert from '@material-ui/core/Alert';
-import AlertTitle from '@material-ui/core/AlertTitle';
 import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
 import ToggleButton from '@material-ui/core/ToggleButton';
 import ToggleButtonGroup from '@material-ui/core/ToggleButtonGroup';
 import Typography from '@material-ui/core/Typography';
@@ -37,12 +33,12 @@ import type { DateRange } from '@material-ui/lab/DateRangePicker';
 import LocalizationProvider from '@material-ui/lab/LocalizationProvider';
 // @ts-expect-error ts(2307) There's no typings for `react-charts`
 import { Chart } from 'react-charts';
-import { ErrorBoundary as ReactErrorBoundary, useErrorHandler } from 'react-error-boundary';
-import type { FallbackProps } from 'react-error-boundary';
+import { useErrorHandler } from 'react-error-boundary';
 import { FixedSizeList } from 'react-window';
 import type { ListChildComponentProps } from 'react-window';
 
 import { createFilterOptions } from './createFilterOptions';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const FINNHUB_API_KEY = process.env.REACT_APP_FINNHUB_API_KEY;
 
@@ -530,35 +526,6 @@ function StockChart({ symbols, dateRange }: ChartProps) {
         }
       </div>
     </>
-  );
-}
-
-function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
-  return (
-    <Alert
-      severity="error"
-      action={
-        <Button color="secondary" onClick={resetErrorBoundary}>
-          Try again
-        </Button>
-      }
-    >
-      <AlertTitle>Something went wrong</AlertTitle>
-      <pre>{error.toString()}</pre>
-    </Alert>
-  );
-}
-
-function ErrorBoundary({ children }: PropsWithChildren<{}>) {
-  return (
-    <ReactErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onError={(error) => {
-        console.error(error);
-      }}
-    >
-      {children}
-    </ReactErrorBoundary>
   );
 }
 
