@@ -20,14 +20,12 @@ import TextField from '@material-ui/core/TextField';
 import Autocomplete from '@material-ui/core/Autocomplete';
 import type { AutocompleteProps } from '@material-ui/core/Autocomplete';
 import CircularProgress from '@material-ui/core/CircularProgress';
-import Box from '@material-ui/core/Box';
 import ToggleButton from '@material-ui/core/ToggleButton';
 import ToggleButtonGroup from '@material-ui/core/ToggleButtonGroup';
 import Typography from '@material-ui/core/Typography';
 import { useTheme } from '@material-ui/core/styles';
 import useMediaQuery from '@material-ui/core/useMediaQuery';
 import DateFnsAdapter from '@material-ui/lab/AdapterDateFns';
-import MuiDateRangePicker from '@material-ui/lab/DateRangePicker';
 import type { DateRange } from '@material-ui/lab/DateRangePicker';
 import LocalizationProvider from '@material-ui/lab/LocalizationProvider';
 // @ts-expect-error ts(2307) There's no typings for `react-charts`
@@ -37,6 +35,7 @@ import { FixedSizeList } from 'react-window';
 import type { ListChildComponentProps } from 'react-window';
 
 import { createFilterOptions } from './createFilterOptions';
+import { DateRangePicker } from './DateRangePicker';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useRemoteData } from './useRemoteData';
 
@@ -265,27 +264,6 @@ function StockSelect({ symbols, onChange }: StockSelectProps) {
             ),
           }}
         />
-      )}
-    />
-  );
-}
-
-type DateRangePickerProps = {
-  value: DateRange<Date>;
-  onChange: (value: DateRange<Date>) => void;
-};
-
-function DateRangePicker({ value, onChange }: DateRangePickerProps) {
-  return (
-    <MuiDateRangePicker
-      value={value}
-      onChange={onChange}
-      renderInput={(startProps, endProps) => (
-        <>
-          <TextField {...startProps} variant="standard" />
-          <Box sx={{ mx: 2 }}> to </Box>
-          <TextField {...endProps} variant="standard" />
-        </>
       )}
     />
   );
