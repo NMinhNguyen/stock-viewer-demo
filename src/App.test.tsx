@@ -14,6 +14,8 @@ import App from './App';
   ✅ I can change the date range in the interactive chart
 */
 
+jest.setTimeout(10000);
+
 // https://kentcdodds.com/blog/write-fewer-longer-tests
 test('lets a user select up to 3 stocks', async () => {
   render(<App />);
@@ -114,4 +116,47 @@ test('lets a user select and change a date range', async () => {
   } finally {
     jest.useRealTimers();
   }
+});
+
+test('renders a chart with the ability to toggle price types', async () => {
+  jest.useFakeTimers('modern');
+  jest.setSystemTime(new Date('2021-03-20'));
+
+  try {
+    render(<App />);
+
+    userEvent.click(screen.getByLabelText(/start/i));
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 10, 2021' }));
+    userEvent.click(screen.getByRole('cell', { name: 'Mar 12, 2021' }));
+  } finally {
+    jest.useRealTimers();
+  }
+  userEvent.click(screen.getByRole('button', { name: 'OK' }));
+
+  const stockSelect = screen.getByLabelText(/choose up to 3 stocks/i);
+  userEvent.click(stockSelect);
+
+  await screen.findByRole('listbox');
+  userEvent.click(screen.getByRole('option', { name: /GME/ }));
+  userEvent.click(screen.getByRole('option', { name: /AMC/ }));
+
+  expect(await screen.findByTestId('chart')).toBeInTheDocument();
+
+  const open = screen.getByRole('button', { name: 'OPEN' });
+  const high = screen.getByRole('button', { name: 'HIGH' });
+  const low = screen.getByRole('button', { name: 'LOW' });
+  const close = screen.getByRole('button', { name: 'CLOSE' });
+
+  expect(open).toHaveAttribute('aria-pressed', 'true');
+  expect(high).toHaveAttribute('aria-pressed', 'false');
+  expect(low).toHaveAttribute('aria-pressed', 'false');
+  expect(close).toHaveAttribute('aria-pressed', 'false');
+
+  userEvent.click(close);
+
+  expect(screen.getByTestId('chart')).toBeInTheDocument();
+  expect(open).toHaveAttribute('aria-pressed', 'false');
+  expect(high).toHaveAttribute('aria-pressed', 'false');
+  expect(low).toHaveAttribute('aria-pressed', 'false');
+  expect(close).toHaveAttribute('aria-pressed', 'true');
 });
